@@ -136,6 +136,46 @@ app.post("/api/leads", async (request, response, next) => {
   }
 });
 
+const updateLeadStatusSchema = z
+  .object({
+    status: z.literal("CONTACTED"),
+  })
+  .strict();
+
+app.patch("/api/leads/:leadId/status", async (request, response, next) => {
+  try {
+    const parsed = updateLeadStatusSchema.safeParse(request.body);
+    if (!parsed.success) {
+      response.status(400).json({ error: "invalid_request", details: parsed.error.flatten() });
+      return;
+    }
+
+    const leadId = request.params.leadId;
+    const existingLead = await prisma.lead.findUnique({
+      where: { id: leadId },
+    });
+
+    if (!existingLead) {
+      response.status(404).json({ error: "lead_not_found" });
+      return;
+    }
+
+    if (existingLead.status !== "NEW") {
+      response.status(400).json({ error: "invalid_status_transition" });
+      return;
+    }
+
+    const updatedLead = await prisma.lead.update({
+      where: { id: leadId },
+      data: { status: parsed.data.status },
+    });
+
+    response.json(serializeLead(updatedLead));
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/ai/extract", async (request, response, next) => {
   try {
     const parsed = extractRequestSchema.safeParse(request.body);
