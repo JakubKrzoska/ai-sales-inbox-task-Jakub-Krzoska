@@ -66,9 +66,14 @@ h3 { font-size: .94rem; margin: 0 0 3px; }
 .lead-list .lead-card:last-child { border-bottom: 0; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 30px; }
 .tag { background: #edf6f0; border-radius: 100px; color: #39715b; font-size: .72rem; font-weight: 700; padding: 5px 10px; }
-.lead-card { align-items: flex-start; background: #fff; border: 1px solid #dce5de; border-radius: 12px; display: flex; gap: 10px; margin-top: 10px; padding: 14px; }
-.lead-card p { color: #63736b; font-size: .78rem; margin-bottom: 10px; }
-.lead-card .muted { font-size: .72rem; }
+.lead-card { align-items: center; background: #fff; border: 1px solid #dce5de; border-radius: 12px; display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; padding: 18px 24px; }
+.lead-card p { color: #63736b; font-size: .84rem; margin-bottom: 8px; }
+.lead-card .muted { font-size: .78rem; display: flex; align-items: center; gap: 8px; }
+.lead-content { flex: 1; min-width: 0; }
+.lead-actions { flex-shrink: 0; }
+.status-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: .72rem; font-weight: 750; letter-spacing: .04em; }
+.status-new { background: #e0f2e9; color: #0c8f71; }
+.status-contacted { background: #e9eeea; color: #55655d; }
 
 @media (max-width: 720px) {
   .topbar { gap: 14px; padding: 14px 18px; }
