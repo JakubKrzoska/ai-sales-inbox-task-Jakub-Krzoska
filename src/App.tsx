@@ -70,6 +70,186 @@ function MessageRow({ message }: { message: Message }) {
   );
 }
 
+function LeadExtractionPanel({ messageId }: { messageId: string }) {
+  const [product, setProduct] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [material, setMaterial] = useState("");
+  const [budget, setBudget] = useState("");
+
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const handleExtract = async () => {
+    setIsExtracting(true);
+    setExtractionError(null);
+    try {
+      const data = await api.extractLead(messageId);
+      setProduct((prev) => (prev.trim() !== "" ? prev : data.product ?? ""));
+      setQuantity((prev) =>
+        prev.trim() !== ""
+          ? prev
+          : data.quantity !== null && data.quantity !== undefined
+          ? String(data.quantity)
+          : "",
+      );
+      setMaterial((prev) => (prev.trim() !== "" ? prev : data.material ?? ""));
+      setBudget((prev) =>
+        prev.trim() !== ""
+          ? prev
+          : data.budget !== null && data.budget !== undefined
+          ? String(data.budget)
+          : "",
+      );
+    } catch {
+      setExtractionError("Could not extract lead data with AI. You can still fill the form manually.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleSaveLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveError(null);
+
+    const trimmedProduct = product.trim();
+    if (!trimmedProduct) {
+      setSaveError("Product is required.");
+      return;
+    }
+
+    const parsedQuantity = Number(quantity.trim());
+    if (!quantity.trim() || !Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+      setSaveError("Quantity must be a positive whole number.");
+      return;
+    }
+
+    const trimmedBudget = budget.trim();
+    let parsedBudget: number | null = null;
+    if (trimmedBudget !== "") {
+      parsedBudget = Number(trimmedBudget);
+      if (Number.isNaN(parsedBudget) || !Number.isFinite(parsedBudget) || parsedBudget < 0) {
+        setSaveError("Budget must be a non-negative number.");
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      await api.createLead({
+        sourceMessageId: messageId,
+        product: trimmedProduct,
+        quantity: parsedQuantity,
+        material: material.trim() || null,
+        budget: parsedBudget,
+      });
+      window.location.href = "/pipeline";
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save lead.");
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <aside className="panel extraction-panel" aria-label="Lead extraction">
+      <div className="extraction-header">
+        <div>
+          <p className="eyebrow">Lead extraction</p>
+          <h2>Create lead</h2>
+        </div>
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={handleExtract}
+          disabled={isExtracting || isSaving}
+        >
+          {isExtracting ? "Extracting…" : "Extract with AI"}
+        </button>
+      </div>
+
+      {extractionError && (
+        <div role="alert" className="alert-box">
+          {extractionError}
+        </div>
+      )}
+
+      {saveError && (
+        <div role="alert" className="alert-box">
+          {saveError}
+        </div>
+      )}
+
+      <form className="lead-form" onSubmit={handleSaveLead}>
+        <div className="form-field">
+          <label htmlFor="lead-product">Product</label>
+          <input
+            id="lead-product"
+            name="product"
+            type="text"
+            value={product}
+            onChange={(e) => setProduct(e.target.value)}
+            disabled={isSaving}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="lead-quantity">Quantity</label>
+          <input
+            id="lead-quantity"
+            name="quantity"
+            type="number"
+            min="1"
+            step="1"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            disabled={isSaving}
+            required
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="lead-material">Material</label>
+          <input
+            id="lead-material"
+            name="material"
+            type="text"
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+            disabled={isSaving}
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="lead-budget">Budget</label>
+          <input
+            id="lead-budget"
+            name="budget"
+            type="number"
+            min="0"
+            step="any"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            disabled={isSaving}
+          />
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={isSaving || isExtracting}
+          >
+            {isSaving ? "Saving lead…" : "Save lead"}
+          </button>
+        </div>
+      </form>
+    </aside>
+  );
+}
+
 function DetailPage({ messageId }: { messageId: string }) {
   const [message, setMessage] = useState<Message | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -98,10 +278,7 @@ function DetailPage({ messageId }: { messageId: string }) {
           </dl>
           <div className="message-body">{message.body}</div>
         </article>
-        <aside className="panel placeholder-panel" aria-label="Lead extraction status">
-          <p className="eyebrow">Next step</p>
-          <p className="placeholder" role="status">Lead extraction not implemented yet.</p>
-        </aside>
+        <LeadExtractionPanel messageId={messageId} />
       </section>
     </main>
   );
